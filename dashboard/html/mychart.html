@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Simple IoT protocol</title>
+  <style>
+    div{
+      width: 50%;
+      margin: 0 auto;
+    }
+    h2{
+      font-family: Helvetica;
+    }
+    p{
+      font-family: Helvetica;
+    }
+  </style>
+</head>
+<body>
+  <h2 align="center">Simple Internet of Things Protocol</h2>
+  <p align="center">powered by <a href="https://www.iottweet.com">IoTtweet.com</a><p>
+  <div><canvas id="mychart" width="700" height="450"></canvas></div>
+  <div><canvas id="mychart2" width="700" height="450"></canvas></div>
+
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+<script src="./src/js/Chart.min.js"></script>
+<script src="./src/js/moment.js"></script>
+
+<script>
+
+var path, dataset=[], timeset=[];
+var chart_canvas = document.getElementById('mychart').getContext('2d');
+var chart_canvas2 = document.getElementById('mychart2').getContext('2d');
+
+getdata(10);
+drawchart(dataset, timeset);
+drawchart2(dataset, timeset);
+
+setInterval(function(){
+  getdata(10);
+  chartupdate();
+  chart_2update();
+},1000);
+
+/* script สำหรับเรียกข้อมูลจาก app.js */
+function getdata(_datasize) {
+  path = 'http://localhost:4000/read/'; /* ใส่ IP address server ของเราลงไปครับ */
+  path += _datasize;
+  path += '?output=jsonp&callback=?';
+
+  $.getJSON(path,{
+  })
+  .done(function(data){
+    var output;
+    output = JSON.stringify(data);
+    var output_json = '{"dataset":' + output + '}';
+    console.log(output_json);
+    parsejson(output_json);
+  });
+}
+
+function parsejson(_txtParse){
+  var parsed = JSON.parse(_txtParse);
+  var parsed_obj = parsed.dataset;
+
+  //var browser_unix = new Date();
+  //var browser_time = new Date();
+
+  for(var i in parsed_obj){
+    dataset[i] = parsed_obj[i].data;
+    timeset[i] = moment(new Date(Number(parsed_obj[i].recordTime))).format('MMM Do YY, h:mm:ss a');
+  }
+
+  // dataset =dataset.reverse();
+  // timeset =timeset.reverse();
+  dataset = re_numbering(dataset);
+  timeset = re_numbering(timeset);
+
+}
+
+function drawchart(_dataset,_timeset){
+
+    chart = new Chart(chart_canvas, {
+    type: 'line',
+    data: {
+        labels: _timeset,  // X axis
+        datasets: [{
+            label: 'my chart with my IoT protocol',  //label
+            fill: true,
+            lineTension: 0.5,  //curve line
+            backgroundColor: "rgba(0, 255, 162, 0.3)",  //fill color
+            borderColor: "rgb(83, 255, 192)", // line color
+            data: _dataset
+        }]
+    },
+    options: {
+        animation: false, //overload webapp
+        scales: {
+          xAxes: [{
+            ticks:{
+              fontSize : 9
+              }
+            }],
+          yAxes: [{
+            scaleLabel: {
+              display: true,
+              labelString: 'Data from IoT devices.'
+            }
+          }]
+        }
+      }
+    });
+
+    chart.options.scales.yAxes[0].ticks.min = 0;
+    chart.options.scales.yAxes[0].ticks.max = 100;
+  }
+
+  function chartupdate(){
+    chart.data.labels = timeset;
+    chart.data.datasets[0].data = dataset;
+    chart.update();
+  }
+
+  function drawchart2(_dataset,_timeset){
+
+      chart_2 = new Chart(chart_canvas2, {
+      type: 'line',
+      data: {
+          labels: _timeset,  // X axis
+          datasets: [{
+              label: 'my chart with my IoT protocol',  //label
+              fill: true,
+              lineTension: 0.5,  //curve line
+              backgroundColor: "rgba(63, 117, 198, 1)",  //fill color
+              borderColor: "rgb(83, 255, 192)", // line color
+              data: _dataset
+          }]
+      },
+      options: {
+          animation: false, //overload webapp
+          scales: {
+            xAxes: [{
+              ticks:{
+                fontSize : 9
+                }
+              }],
+            yAxes: [{
+              scaleLabel: {
+                display: true,
+                labelString: 'Data from IoT devices2.'
+              }
+            }]
+          }
+        }
+      });
+
+      chart_2.options.scales.yAxes[0].ticks.min = 0;
+      chart_2.options.scales.yAxes[0].ticks.max = 100;
+    }
+
+function chart_2update(){
+  chart_2.data.labels = timeset;
+  chart_2.data.datasets[0].data = dataset;
+  chart_2.update();
+}
+//data =[5,4,3,2,1]
+function re_numbering(_arr){
+  var _dummy_arr=[];
+  var _cnt_dwn = _arr.length-1; //5-1 = 4
+
+  for(var i=0; i<_arr.length; i++){
+    _dummy_arr[i] = _arr[_cnt_dwn]; // _dummy_arr = [1,2,3,4,5]
+    _cnt_dwn--;
+  }
+  return _dummy_arr;
+}
+</script>
+</body>
+</html>

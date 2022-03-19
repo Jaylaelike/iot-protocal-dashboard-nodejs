@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Multiple IoT Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+  <style>
+    div{
+      width: 100%;
+    }
+    h2{
+      font-family: Helvetica;
+    }
+    p{
+      font-family: Helvetica;
+    }
+  </style>
+</head>
+<body>
+
+  <h2 align="center">Dashboard with Multiple device of IoT.</h2>
+
+  <div class="w3-row">
+
+    <div class="w3-third">
+      <p align="center">Device 1</p>
+      <span id="chart_1_updatedtime"></span>
+      <canvas id="chart_1_canvas" width="350" height="200"></canvas>
+    </div>
+
+    <div class="w3-third">
+      <p align="center">Device 2</p>
+      <span id="chart_2_updatedtime"></span>
+      <canvas id="chart_2_canvas" width="350" height="200"></canvas>
+    </div>
+
+    <div class="w3-third">
+      <p align="center">Device 3</p>
+      <span id="chart_3_updatedtime"></span>
+      <canvas id="chart_3_canvas" width="350" height="200"></canvas>
+    </div>
+
+  </div>
+
+</body>
+
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+<script src="./src/js/Chart.min.js"></script>
+<script src="./src/js/moment.js"></script>
+
+<script>
+
+var path, read_dataset=[], espino_set=[], nodemcu_set=[], wemos_set=[];
+var read_timeset=[], espino_timeset=[], nodemcu_timeset=[], wemos_timeset=[];
+
+var chart_1_obj = document.getElementById('chart_1_canvas').getContext('2d');
+var chart_2_obj = document.getElementById('chart_2_canvas').getContext('2d');
+var chart_3_obj = document.getElementById('chart_3_canvas').getContext('2d');
+
+getdata('Espino',30);
+getdata('Nodemcu',30);
+getdata('Wemos',30);
+
+drawchart_1(espino_set, espino_timeset);
+drawchart_2(nodemcu_set, nodemcu_timeset);
+drawchart_3(wemos_set, wemos_timeset);
+
+setInterval(function(){
+
+  getdata('Espino',30);
+  getdata('Nodemcu',30);
+  getdata('Wemos',30);
+
+  chart_1_update();
+  chart_2_update();
+  chart_3_update();
+
+},1000);
+
+/* script สำหรับเรียกข้อมูลจาก app.js */
+function getdata(_deviceid, _datasize) {
+  path = 'http://192.168.1.18:4000/readwithidtoken/'; /* ใส่ IP address server ของเราลงไปครับ */
+  path += _deviceid + '/';
+  path += _datasize;
+  path += '?output=jsonp&callback=?';
+
+  $.getJSON(path,{
+  })
+  .done(function(data){
+    var output;
+    output = JSON.stringify(data);
+    var output_json = '{"dataset":' + output + '}';
+    //console.log(output_json);
+    parsejson(_deviceid,output_json);
+  });
+}
+
+function parsejson(_txtdeviceid, _txtParse){
+
+  // Clean read_dataset & read_timeset
+  read_dataset = [];
+  read_timeset = [];
+
+  var parsed = JSON.parse(_txtParse);
+  var parsed_obj = parsed.dataset;
+
+  var browser_unix = new Date();
+  var browser_time = new Date();
+
+  for(var i in parsed_obj){
+    read_dataset[i] = parsed_obj[i].data;
+    read_timeset[i] = moment(new Date(Number(parsed_obj[i].recordTime))).format('MMM Do YY, h:mm:ss a');
+  }
+
+  read_dataset = re_numbering(read_dataset);
+  read_timeset = re_numbering(read_timeset);
+
+  switch (_txtdeviceid) {
+    case 'Espino':
+        espino_set = read_dataset;
+        espino_timeset = read_timeset;
+      break;
+    case 'Nodemcu':
+        nodemcu_set = read_dataset;
+        nodemcu_timeset = read_timeset;
+      break;
+    case 'Wemos':
+        wemos_set = read_dataset;
+        wemos_timeset = read_timeset;
+      break;
+    default:
+
+  }
+
+  console.log('------------');
+  console.log('Espino : ' + espino_set);
+  console.log('Nodemcu : ' + nodemcu_set);
+  console.log('Wemos : ' + wemos_set);
+  console.log('------------');
+
+}
+
+function drawchart_1(_chart_1_set,_timeset){
+
+    chart_1 = new Chart(chart_1_obj, {
+    type: 'line',
+    data: {
+        labels: _timeset,
+        datasets: [{
+            label: 'Data from Espino',
+            fill: true,
+            lineTension: 0.5,
+            backgroundColor: "rgba(255, 0, 0, 0.3)",
+            borderColor: "rgb(255, 0, 0)",
+            data: _chart_1_set
+        }]
+    },
+    options: {
+        animation: false,
+        scales: {
+          xAxes: [{
+            ticks:{
+              fontSize : 9
+              }
+            }],
+          yAxes: [{
+            scaleLabel: {
+              display: true,
+              labelString: 'random data'
+            }
+          }]
+        }
+      }
+    });
+
+    chart_1.options.scales.yAxes[0].ticks.min = 0;
+    chart_1.options.scales.yAxes[0].ticks.max = 100;
+  }
+
+function chart_1_update(){
+  chart_1.data.labels = espino_timeset;
+  chart_1.data.datasets[0].data = espino_set;
+  chart_1.update();
+
+  $('#chart_1_updatedtime').text('Update on ' + espino_timeset[29])
+}
+
+function drawchart_2(_chart_2_set,_timeset){
+
+    chart_2 = new Chart(chart_2_obj, {
+    type: 'line',
+    data: {
+        labels: _timeset,
+        datasets: [{
+            label: 'Data from Nodemcu',
+            fill: true,
+            lineTension: 0.5,
+            backgroundColor: "rgba(58, 252, 164, 0.3)",
+            borderColor: "rgb(58, 252, 164)",
+            data: _chart_2_set
+        }]
+    },
+    options: {
+        animation: false,
+        scales: {
+          xAxes: [{
+            ticks:{
+              fontSize : 9
+              }
+            }],
+          yAxes: [{
+            scaleLabel: {
+              display: true,
+              labelString: 'random data'
+            }
+          }]
+        }
+      }
+    });
+
+    chart_2.options.scales.yAxes[0].ticks.min = 0;
+    chart_2.options.scales.yAxes[0].ticks.max = 100;
+  }
+
+function chart_2_update(){
+  chart_2.data.labels = nodemcu_timeset;
+  chart_2.data.datasets[0].data = nodemcu_set;
+  chart_2.update();
+
+  $('#chart_2_updatedtime').text('Update on ' + nodemcu_timeset[29])
+}
+
+function drawchart_3(_chart_3_set,_timeset){
+
+    chart_3 = new Chart(chart_3_obj, {
+    type: 'line',
+    data: {
+        labels: _timeset,
+        datasets: [{
+            label: 'Data from Wemos',
+            fill: true,
+            lineTension: 0.5,
+            backgroundColor: "rgba(85, 183, 252, 0.3)",
+            borderColor: "rgb(85, 183, 252)",
+            data: _chart_3_set
+        }]
+    },
+    options: {
+        animation: false,
+        scales: {
+          xAxes: [{
+            ticks:{
+              fontSize : 9
+              }
+            }],
+          yAxes: [{
+            scaleLabel: {
+              display: true,
+              labelString: 'random data'
+            }
+          }]
+        }
+      }
+    });
+
+    chart_3.options.scales.yAxes[0].ticks.min = 0;
+    chart_3.options.scales.yAxes[0].ticks.max = 100;
+  }
+
+function chart_3_update(){
+  chart_3.data.labels = wemos_timeset;
+  chart_3.data.datasets[0].data = wemos_set;
+  chart_3.update();
+
+  $('#chart_3_updatedtime').text('Update on ' + wemos_timeset[29])
+}
+
+function re_numbering(_arr){
+  var _dummy_arr=[];
+  var _cnt_dwn = _arr.length-1;
+
+  for(var i=0; i<_arr.length; i++){
+    _dummy_arr[i] = _arr[_cnt_dwn];
+    _cnt_dwn--;
+  }
+  return _dummy_arr;
+}
+</script>
+</html>
